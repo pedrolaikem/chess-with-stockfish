@@ -20,28 +20,42 @@ const ChessBoard: React.FC = () => {
     const move = {
       from: sourceSquare,
       to: targetSquare,
+      promotion: 'q',
     };
 
     try {
-      const moveResult = game.move(move);
 
+      // Verifica se o jogador está em xeque
+
+
+      const moveResult = game.move(move);
+      
       if (!moveResult) throw new Error('Movimento inválido');
 
       setPosition(game.fen());
       setPreviousMove(moveResult.san);
       socket.emit('user_move', moveResult.san);
-      
+
       // Verifica se o jogo terminou com cheque-mate
       if (game.isCheckmate()) {
         const winnerColor = game.turn() === 'w' ? 'pretas' : 'brancas'; // A cor que venceu é a que não está em cheque
         setMessages((prev) => [...prev, `Cheque-mate! As ${winnerColor} venceram!`]);
       }
 
+      // Verifica se o jogador entrou em xeque após o movimento
+      if (game.isCheck()) {
+        const playerColor = game.turn() === 'w' ? 'brancas' : 'pretas';
+        setMessages((prev) => [...prev, `Xeque! O rei das ${playerColor} está em xeque.`]);
+      }
+
       return true
-      
+
     } catch (error) {
-      console.error("Movimento inválido:", move);
-      setMessages((prev) => [...prev, 'Movimento inválido!']);
+      if (game.isCheck()) {
+        setMessages((prev) => [...prev, 'Você está em xeque! Não pode fazer esse movimento.']);
+      } else {
+        setMessages((prev) => [...prev, 'Movimento inválido!']);
+      }
       return false
     }
 
@@ -86,7 +100,11 @@ const ChessBoard: React.FC = () => {
 
         <Grid xs={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
 
-          <Chessboard position={position} onPieceDrop={handleMove} boardWidth={600} />
+          <Chessboard
+            position={position}
+            onPieceDrop={handleMove}
+            boardWidth={600}
+            autoPromoteToQueen={true} />
           <OpeningDetector game={game} setMessages={setMessages} />
 
           {/* Área de Chat */}
